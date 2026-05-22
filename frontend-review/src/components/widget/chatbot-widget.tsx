@@ -59,6 +59,7 @@ export function ChatbotWidget() {
   const [booking, setBooking] = useState(emptyBooking);
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [aiPaused, setAiPaused] = useState(false);
+  const [bookingError, setBookingError] = useState("");
   const [messages, setMessages] = useState<WidgetMessage[]>([
     {
       id: "welcome",
@@ -187,7 +188,13 @@ export function ChatbotWidget() {
   }
 
   async function submitBooking(bookingData = booking) {
-    if (!isBookingComplete(bookingData)) return;
+    const missing = missingBookingFields(bookingData);
+    if (missing.length) {
+      setBookingError(`Missing: ${missing.join(", ")}`);
+      return;
+    }
+
+    setBookingError("");
     setLoading(true);
     const doctor = doctors.find((item) => item.name === bookingData.suggestedDoctor);
     try {
@@ -205,7 +212,10 @@ export function ChatbotWidget() {
           suggestedSpecialty: doctor?.specialty ?? "General Medicine",
         }),
       });
-      if (!response.ok) throw new Error("Booking failed");
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Booking failed");
+      }
       const responseData = (await response.json()) as { message: string; available?: boolean };
       setMessages((current) => [
         ...current,
@@ -220,6 +230,7 @@ export function ChatbotWidget() {
       setAiSuggestion("");
       setBookingOpen(false);
     } catch {
+      setBookingError("Booking request failed. Check the selected doctor, date, and time.");
       setMessages((current) => [
         ...current,
         { id: crypto.randomUUID(), sender: "assistant", text: "I could not create the booking request. Please try again." },
@@ -234,7 +245,20 @@ export function ChatbotWidget() {
   }
 
   function isBookingComplete(data = booking) {
-    return Object.values(data).every((value) => value.trim().length > 0);
+    return missingBookingFields(data).length === 0;
+  }
+
+  function missingBookingFields(data = booking) {
+    const required: Array<[keyof typeof booking, string]> = [
+      ["patientName", "name"],
+      ["patientAge", "age"],
+      ["patientPhone", "phone"],
+      ["reason", "reason"],
+      ["suggestedDoctor", "doctor"],
+      ["preferredDate", "date"],
+      ["preferredTime", "time"],
+    ];
+    return required.filter(([key]) => !data[key].trim()).map(([, label]) => label);
   }
 
   function selectedDoctorSlots() {
@@ -337,12 +361,13 @@ export function ChatbotWidget() {
                   {booking.suggestedDoctor && booking.preferredDate && !selectedDoctorSlots().length && (
                     <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">This doctor has no listed slots for that date.</p>
                   )}
+                  {bookingError && <p className="rounded-md bg-destructive/10 p-2 text-xs font-medium text-destructive">{bookingError}</p>}
                   <Button variant="outline" type="button" onClick={suggestDoctor} disabled={loading || !booking.reason.trim()}>
                     <Sparkles className="h-4 w-4" />
                     AI assistance
                   </Button>
                   {aiSuggestion && <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">{aiSuggestion}</p>}
-                  <Button type="button" onClick={() => submitBooking()} disabled={loading || !isBookingComplete()}>
+                  <Button type="button" onClick={() => submitBooking()} disabled={loading}>
                     Create booking
                   </Button>
                 </div>
