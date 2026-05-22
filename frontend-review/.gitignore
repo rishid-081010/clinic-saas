@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Production output
+dist/
+
+# Local caches and logs
+.npm-cache/
+.vite/
+*.log
+
+# Local-only workspace helpers
+.sandbox/
+admin-sandbox/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

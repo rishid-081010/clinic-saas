@@ -1,0 +1,14 @@
+node_modules/
+dist/
+frontend-review/node_modules/
+frontend-review/dist/
+apps/api/dist/
+apps/api/data/*.json
+!apps/api/data/.gitkeep
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+.DS_Store

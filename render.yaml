@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: patient-engagement-platform
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:prod
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: SERVE_FRONTEND
+        value: "true"
+      - key: FRONTEND_DIST
+        value: frontend-review/dist
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PROJECT_REF
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: knowledge-base
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON_BASE64
+        sync: false
+      - key: GOOGLE_CLOUD_PROJECT
+        sync: false
+      - key: VERTEX_LOCATION
+        value: us-central1
+      - key: GEMINI_CHAT_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: GEMINI_EMBEDDING_DIMENSIONS
+        value: "768"
+
+  - type: cron
+    name: patient-engagement-keepalive
+    runtime: node
+    schedule: "*/5 * * * *"
+    buildCommand: npm install
+    startCommand: npm run keepalive
+    envVars:
+      - key: KEEPALIVE_URL
+        sync: false
