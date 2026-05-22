@@ -13,6 +13,7 @@ type Doctor = {
   id: string;
   name: string;
   specialty: string;
+  schedule?: Array<{ day: string; startTime: string; endTime: string }>;
 };
 
 const quickReplies = [
@@ -236,6 +237,15 @@ export function ChatbotWidget() {
     return Object.values(data).every((value) => value.trim().length > 0);
   }
 
+  function selectedDoctorSlots() {
+    const doctor = doctors.find((item) => item.name === booking.suggestedDoctor);
+    if (!doctor || !booking.preferredDate) return [];
+    const day = dayKeyForDate(booking.preferredDate);
+    const schedule = doctor.schedule?.find((slot) => slot.day === day);
+    if (!schedule) return [];
+    return buildTimeSlots(schedule.startTime, schedule.endTime);
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void sendMessage(input);
@@ -281,7 +291,7 @@ export function ChatbotWidget() {
                   <input className="h-9 rounded-md border px-3 text-sm" placeholder="Issue / reason for visit" value={booking.reason} onChange={(event) => updateBooking("reason", event.target.value)} />
                   <div className="grid grid-cols-2 gap-2">
                     <input className="h-9 rounded-md border px-3 text-sm" type="date" value={booking.preferredDate} onChange={(event) => updateBooking("preferredDate", event.target.value)} />
-                    <input className="h-9 rounded-md border px-3 text-sm" type="time" value={booking.preferredTime} onChange={(event) => updateBooking("preferredTime", event.target.value)} />
+                    <input className="h-9 rounded-md border px-3 text-sm" type="time" value={booking.preferredTime} onChange={(event) => updateBooking("preferredTime", event.target.value)} disabled={Boolean(booking.suggestedDoctor && booking.preferredDate)} />
                   </div>
                   <select
                     className="h-9 rounded-md border bg-card px-3 text-sm"
@@ -297,6 +307,21 @@ export function ChatbotWidget() {
                       <option key={doctor.id} value={doctor.name}>{doctor.name} - {doctor.specialty}</option>
                     ))}
                   </select>
+                  {booking.suggestedDoctor && booking.preferredDate && (
+                    <select
+                      className="h-9 rounded-md border bg-card px-3 text-sm"
+                      value={booking.preferredTime}
+                      onChange={(event) => updateBooking("preferredTime", event.target.value)}
+                    >
+                      <option value="">Select available time</option>
+                      {selectedDoctorSlots().map((time) => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  )}
+                  {booking.suggestedDoctor && booking.preferredDate && !selectedDoctorSlots().length && (
+                    <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">This doctor has no listed slots for that date.</p>
+                  )}
                   <Button variant="outline" type="button" onClick={suggestDoctor} disabled={loading || !booking.reason.trim()}>
                     <Sparkles className="h-4 w-4" />
                     AI assistance
@@ -341,4 +366,35 @@ export function ChatbotWidget() {
       </Button>
     </div>
   );
+}
+
+function dayKeyForDate(date: string) {
+  const parsed = new Date(`${date}T00:00:00`);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][parsed.getDay()];
+}
+
+function buildTimeSlots(startTime: string, endTime: string) {
+  const start = minutesFromTime(startTime);
+  const end = minutesFromTime(endTime);
+  if (start === null || end === null || end <= start) return [];
+
+  const slots: string[] = [];
+  for (let minute = start; minute + 30 <= end; minute += 30) {
+    slots.push(timeFromMinutes(minute));
+  }
+  return slots;
+}
+
+function minutesFromTime(value: string) {
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return hour * 60 + minute;
+}
+
+function timeFromMinutes(value: number) {
+  const hour = Math.floor(value / 60);
+  const minute = value % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
