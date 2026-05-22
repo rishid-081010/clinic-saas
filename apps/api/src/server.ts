@@ -702,13 +702,26 @@ app.post("/api/public/:orgSlug/widget/booking-request", async (request, reply) =
     item.status !== "cancelled"
   );
   const availableTimings = getAvailableDoctorSlots(doctor, booking.preferredDate, existingBookings, 30);
-  const availability = await checkBookingAvailabilityWithAi({
-    booking,
-    doctor,
-    existingBookings,
+  const slotAvailable = availableTimings.includes(booking.preferredTime);
+  let availability = {
+    available: slotAvailable,
     availableTimings,
-    appointmentMinutes: 30,
-  });
+    message: slotAvailable
+      ? `Your appointment slot at ${booking.preferredTime} is available and has been confirmed.`
+      : `That slot is not available. Available timings for this doctor are: ${availableTimings.length ? availableTimings.join(", ") : "no slots available for this day"}.`,
+  };
+
+  try {
+    availability = await checkBookingAvailabilityWithAi({
+      booking,
+      doctor,
+      existingBookings,
+      availableTimings,
+      appointmentMinutes: 30,
+    });
+  } catch (error) {
+    app.log.warn({ error }, "AI booking availability check failed; using deterministic slot check");
+  }
 
   if (!availability.available) {
     return {

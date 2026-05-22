@@ -216,24 +216,28 @@ export function ChatbotWidget() {
         const errorText = await response.text();
         throw new Error(errorText || "Booking failed");
       }
-      const responseData = (await response.json()) as { message: string; available?: boolean };
+      const responseData = (await response.json()) as { message?: string; error?: string; available?: boolean };
+      if (responseData.error) throw new Error(responseData.error);
       setMessages((current) => [
         ...current,
         {
           id: crypto.randomUUID(),
           sender: "assistant",
-          text: responseData.available === false ? responseData.message : `${responseData.message} You can now see it in the Bookings tab.`,
+          text: responseData.available === false
+            ? responseData.message || "That slot is not available."
+            : `${responseData.message || "Booking created."} You can now see it in the Bookings tab.`,
         },
       ]);
       if (responseData.available === false) return;
       setBooking(emptyBooking);
       setAiSuggestion("");
       setBookingOpen(false);
-    } catch {
-      setBookingError("Booking request failed. Check the selected doctor, date, and time.");
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : "Booking request failed. Check the selected doctor, date, and time.";
+      setBookingError(message);
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), sender: "assistant", text: "I could not create the booking request. Please try again." },
+        { id: crypto.randomUUID(), sender: "assistant", text: message },
       ]);
     } finally {
       setLoading(false);
