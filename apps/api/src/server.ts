@@ -593,9 +593,17 @@ app.post("/api/public/:orgSlug/widget/chat/message", async (request, reply) => {
       body.message,
       chat.messages.slice(-30).map((message) => ({ sender: message.sender, text: message.text })),
     );
+    const bookingActions: Array<{ type: string; payload?: Record<string, unknown> }> = bookingIntent.wantsBooking ? [{ type: "OPEN_BOOKING_WIDGET" }] : [];
+    app.log.info({
+      latestMessage: body.message,
+      ruleMatched: bookingIntent.ruleMatched,
+      geminiResult: bookingIntent.geminiWantsBooking,
+      source: bookingIntent.source,
+      returnedActions: bookingActions.map((action) => action.type),
+    }, "booking classification");
     if (bookingIntent.wantsBooking) {
       answer = bookingIntent.reply;
-      responseActions = [{ type: "OPEN_BOOKING_WIDGET" }];
+      responseActions = bookingActions;
       chat.intent = "booking";
       chat.status = "booking_started";
     } else {

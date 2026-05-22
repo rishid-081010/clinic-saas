@@ -22,6 +22,8 @@ const quickReplies = [
   "I want to book an appointment",
 ];
 
+const bookingWidgetReply = "I'd be happy to help you schedule an appointment. Please fill out this form below.";
+
 const emptyBooking = {
   patientName: "",
   patientAge: "",
@@ -136,7 +138,7 @@ export function ChatbotWidget() {
 
       setChatId(data.chatId);
       setAiPaused(Boolean(data.aiPaused));
-      if (data.actions?.some((action) => action.type === "OPEN_BOOKING_WIDGET")) {
+      if (data.actions?.some((action) => action.type === "OPEN_BOOKING_WIDGET") || data.answer.trim() === bookingWidgetReply) {
         setBookingOpen(true);
       }
       if (data.answer.trim()) {

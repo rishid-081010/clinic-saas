@@ -34,7 +34,7 @@ export function suggestDoctor(reason: string, doctors: Doctor[]) {
   return { specialty, doctorName: doctor?.name };
 }
 
-const bookingWidgetReply = "I'd be happy to help you schedule an appointment. Please fill out this form below.";
+export const bookingWidgetReply = "I'd be happy to help you schedule an appointment. Please fill out this form below.";
 
 export async function embedText(text: string) {
   return vertexEmbedText(text);
@@ -134,6 +134,28 @@ export function bookingConfirmationText(booking: BookingRequest) {
 }
 
 export async function detectBookingIntentWithAi(message: string, recentMessages: Array<{ sender: string; text: string }>) {
+  const ruleMatched = hasExplicitBookingIntent(message);
+  if (ruleMatched) {
+    return {
+      wantsBooking: true,
+      reply: bookingWidgetReply,
+      source: "rule" as const,
+      ruleMatched,
+      geminiWantsBooking: null,
+    };
+  }
+
+  const ambiguousFollowup = isAmbiguousBookingFollowup(message, recentMessages);
+  if (!ambiguousFollowup) {
+    return {
+      wantsBooking: false,
+      reply: "",
+      source: "rule" as const,
+      ruleMatched,
+      geminiWantsBooking: null,
+    };
+  }
+
   const prompt = [
     "Classify whether the latest patient message is asking to make an appointment immediately.",
     "Return only valid JSON.",
@@ -159,17 +181,60 @@ export async function detectBookingIntentWithAi(message: string, recentMessages:
   const raw = await callChatModel(prompt);
   try {
     const parsed = JSON.parse(raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim()) as { wantsBooking?: boolean; reply?: string };
+    const wantsBooking = parsed.wantsBooking === true;
     return {
-      wantsBooking: parsed.wantsBooking === true,
-      reply: parsed.wantsBooking === true ? bookingWidgetReply : "",
+      wantsBooking,
+      reply: wantsBooking ? bookingWidgetReply : "",
+      source: "gemini" as const,
+      ruleMatched,
+      geminiWantsBooking: wantsBooking,
     };
   } catch {
-    const fallback = /\b(book|booking|appointment|schedule|reserve)\b/i.test(message) || /\b(yes|yeah|yep|sure|ok)\b.*\b(appointment|booking|book|schedule)\b/i.test(message);
     return {
-      wantsBooking: fallback,
-      reply: fallback ? bookingWidgetReply : "",
+      wantsBooking: false,
+      reply: "",
+      source: "gemini_parse_failed" as const,
+      ruleMatched,
+      geminiWantsBooking: null,
     };
   }
+}
+
+function hasExplicitBookingIntent(message: string) {
+  const text = normalizeBookingText(message);
+  if (!text) return false;
+
+  const explicitPatterns = [
+    /\b(book|schedule|make|reserve)\s+(an?\s+)?(appointment|booking|visit|consultation)\b/,
+    /\b(i want|i need|i would like|i'd like|want|need|please)\s+(to\s+)?(book|schedule|reserve|make)\s+(an?\s+)?(appointment|booking|visit|consultation)\b/,
+    /\b(book|schedule|reserve)\s+(me\s+)?(an?\s+)?(appointment|booking|visit|consultation)?\s*(for\s+)?(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2})\b/,
+    /\b(can i|could i|may i)\s+(book|schedule|reserve|make)\s+(an?\s+)?(appointment|booking|visit|consultation)\b/,
+    /\b(can i|could i|may i)\s+(see|meet|visit)\s+(a\s+)?doctor\b/,
+    /\b(yes|yeah|yep|sure|ok|okay)\b.*\b(appointment|booking|book|schedule|visit|consultation)\b/,
+  ];
+
+  return explicitPatterns.some((pattern) => pattern.test(text));
+}
+
+function isAmbiguousBookingFollowup(message: string, recentMessages: Array<{ sender: string; text: string }>) {
+  const text = normalizeBookingText(message);
+  if (!/^(yes|yeah|yep|sure|ok|okay|please|yes please|that works|i need help with that)$/.test(text)) return false;
+
+  const recentAssistantText = recentMessages
+    .filter((item) => item.sender === "assistant")
+    .slice(-3)
+    .map((item) => normalizeBookingText(item.text))
+    .join(" ");
+
+  return /\b(appointment|booking|book|schedule|visit|doctor)\b/.test(recentAssistantText);
+}
+
+function normalizeBookingText(message: string) {
+  return message
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export async function suggestDoctorWithAi(input: { reason: string; patientAge?: number; doctors: Doctor[] }) {
