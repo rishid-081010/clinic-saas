@@ -289,15 +289,11 @@ export function ChatbotWidget() {
                   <input className="h-9 rounded-md border px-3 text-sm" placeholder="Age" type="number" value={booking.patientAge} onChange={(event) => updateBooking("patientAge", event.target.value)} />
                   <input className="h-9 rounded-md border px-3 text-sm" placeholder="Phone number" value={booking.patientPhone} onChange={(event) => updateBooking("patientPhone", event.target.value)} />
                   <input className="h-9 rounded-md border px-3 text-sm" placeholder="Issue / reason for visit" value={booking.reason} onChange={(event) => updateBooking("reason", event.target.value)} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input className="h-9 rounded-md border px-3 text-sm" type="date" value={booking.preferredDate} onChange={(event) => updateBooking("preferredDate", event.target.value)} />
-                    <input className="h-9 rounded-md border px-3 text-sm" type="time" value={booking.preferredTime} onChange={(event) => updateBooking("preferredTime", event.target.value)} disabled={Boolean(booking.suggestedDoctor && booking.preferredDate)} />
-                  </div>
                   <select
                     className="h-9 rounded-md border bg-card px-3 text-sm"
                     value={booking.suggestedDoctor}
                     onChange={(event) => {
-                      const next = { ...booking, suggestedDoctor: event.target.value };
+                      const next = { ...booking, suggestedDoctor: event.target.value, preferredTime: "" };
                       setBooking(next);
                       if (isBookingComplete(next)) void submitBooking(next);
                     }}
@@ -307,17 +303,36 @@ export function ChatbotWidget() {
                       <option key={doctor.id} value={doctor.name}>{doctor.name} - {doctor.specialty}</option>
                     ))}
                   </select>
-                  {booking.suggestedDoctor && booking.preferredDate && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      className="h-9 rounded-md border px-3 text-sm"
+                      type="date"
+                      value={booking.preferredDate}
+                      onChange={(event) => setBooking((current) => ({ ...current, preferredDate: event.target.value, preferredTime: "" }))}
+                    />
+                    {booking.suggestedDoctor && booking.preferredDate ? (
                     <select
                       className="h-9 rounded-md border bg-card px-3 text-sm"
                       value={booking.preferredTime}
                       onChange={(event) => updateBooking("preferredTime", event.target.value)}
                     >
-                      <option value="">Select available time</option>
+                      <option value="">Time</option>
                       {selectedDoctorSlots().map((time) => (
                         <option key={time} value={time}>{time}</option>
                       ))}
                     </select>
+                    ) : (
+                      <input
+                        className="h-9 rounded-md border px-3 text-sm"
+                        placeholder="Time"
+                        type="time"
+                        value={booking.preferredTime}
+                        onChange={(event) => updateBooking("preferredTime", event.target.value)}
+                      />
+                    )}
+                  </div>
+                  {booking.suggestedDoctor && booking.preferredDate && selectedDoctorSlots().length > 0 && !booking.preferredTime && (
+                    <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">Choose one of this doctor's available times.</p>
                   )}
                   {booking.suggestedDoctor && booking.preferredDate && !selectedDoctorSlots().length && (
                     <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground">This doctor has no listed slots for that date.</p>
