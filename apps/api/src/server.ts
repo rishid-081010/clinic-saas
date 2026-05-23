@@ -537,6 +537,17 @@ app.get("/api/public/:orgSlug/widget/patients/:patientUserId/messages", async (r
   };
 });
 
+app.delete("/api/public/:orgSlug/widget/patients/:patientUserId/messages", async (request, reply) => {
+  const params = request.params as { orgSlug: string; patientUserId: string };
+  const db = getDb();
+  const organization = db.organizations.find((item) => item.slug === params.orgSlug);
+  if (!organization) return reply.code(404).send({ error: "Organization not found" });
+
+  db.chats = db.chats.filter((item) => item.organizationId !== organization.id || item.patientUserId !== params.patientUserId);
+  await saveDb();
+  return { ok: true };
+});
+
 app.post("/api/public/:orgSlug/widget/chat/message", async (request, reply) => {
   const body = publicChatMessageSchema.parse(request.body);
   const db = getDb();

@@ -279,6 +279,26 @@ export function ChatbotWidget() {
     void sendMessage(input);
   }
 
+  async function clearChat() {
+    setMessages([
+      {
+        id: "welcome",
+        sender: "assistant",
+        text: "Hi. Ask me about clinic details, FAQs, or booking help.",
+      },
+    ]);
+    setChatId(undefined);
+    setBookingOpen(false);
+    setBooking(emptyBooking);
+    setAiSuggestion("");
+    setBookingError("");
+    setAiPaused(false);
+
+    await fetch(`/api/public/aster-grove/widget/patients/${patientUserId}/messages`, {
+      method: "DELETE",
+    }).catch(() => undefined);
+  }
+
   return (
     <div className="fixed bottom-5 right-5 z-50">
       {open && (
@@ -293,9 +313,14 @@ export function ChatbotWidget() {
                 <p className="text-xs text-muted-foreground">{aiPaused ? "Clinic staff is replying" : "Gemini via Vertex AI"}</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close chatbot">
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={clearChat} disabled={loading}>
+                Clear chat
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close chatbot">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </header>
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
