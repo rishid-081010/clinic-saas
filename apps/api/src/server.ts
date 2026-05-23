@@ -91,14 +91,13 @@ app.post("/api/auth/signup", async (request, reply) => {
     return reply.code(409).send({ error: "Account already exists" });
   }
 
-  const hasAdmin = db.users.some((item) => item.organizationId === organization.id && item.role === "L2_ADMIN");
   const user = {
     id: id("usr"),
     organizationId: organization.id,
     name: body.name,
     email: body.email,
     passwordHash: bcrypt.hashSync(body.password, 10),
-    role: hasAdmin ? "L2_ASSISTANT" as const : "L2_ADMIN" as const,
+    role: "L2_ADMIN" as const,
   };
   db.users.push(user);
   await saveDb();
