@@ -85,7 +85,7 @@ export function ChatbotWidget() {
           if (!data) return;
           if (data.chatId) setChatId(data.chatId);
           setAiPaused(Boolean(data.aiPaused));
-          setMessages([
+          setMessages(dedupeMessages([
             {
               id: "welcome",
               sender: "assistant",
@@ -96,7 +96,7 @@ export function ChatbotWidget() {
               sender: message.sender === "patient" ? "user" : message.sender,
               text: message.text,
             })),
-          ]);
+          ]));
         })
         .catch(() => undefined);
     };
@@ -144,10 +144,10 @@ export function ChatbotWidget() {
         setBookingOpen(true);
       }
       if (data.answer.trim()) {
-        setMessages((current) => [
+        setMessages((current) => dedupeMessages([
           ...current,
           { id: crypto.randomUUID(), sender: "assistant", text: data.answer },
-        ]);
+        ]));
       }
     } catch {
       setMessages((current) => [
@@ -466,4 +466,11 @@ function timeFromMinutes(value: number) {
   const hour = Math.floor(value / 60);
   const minute = value % 60;
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function dedupeMessages(messages: WidgetMessage[]) {
+  return messages.filter((message, index) => {
+    const previous = messages[index - 1];
+    return !previous || previous.sender !== message.sender || previous.text.trim() !== message.text.trim();
+  });
 }
