@@ -13,9 +13,12 @@ type ScheduleRow = { day: string; startTime: string; endTime: string };
 
 export function DoctorsPage() {
   const { data = [] } = useQuery({ queryKey: ["doctors"], queryFn: api.getDoctors });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: api.getMe });
   const [editingDoctor, setEditingDoctor] = useState<any | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const [expandedDoctors, setExpandedDoctors] = useState<string[]>([]);
   const queryClient = useQueryClient();
+  const canManageDoctors = me?.user?.role === "L2_ADMIN";
   const createDoctor = useMutation({
     mutationFn: api.createDoctor,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["doctors"] }),
@@ -29,7 +32,11 @@ export function DoctorsPage() {
   });
   const deleteDoctor = useMutation({
     mutationFn: api.deleteDoctor,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["doctors"] }),
+    onSuccess: () => {
+      setDeleteError("");
+      queryClient.invalidateQueries({ queryKey: ["doctors"] });
+    },
+    onError: () => setDeleteError("Only L2 Admins can delete doctors."),
   });
 
   return (
@@ -55,6 +62,7 @@ export function DoctorsPage() {
         />
 
         <div className="columns-1 gap-4 md:columns-2">
+          {deleteError && <p className="mb-4 break-inside-avoid rounded-md bg-destructive/10 p-3 text-sm font-medium text-destructive">{deleteError}</p>}
           {data.map((doctor: any) => (
             <Card key={doctor.id} className="mb-4 break-inside-avoid">
               <CardContent className="p-4">
@@ -78,7 +86,20 @@ export function DoctorsPage() {
                     <Button size="icon" variant="outline" onClick={() => setEditingDoctor(doctor)} aria-label="Edit doctor">
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="outline" onClick={() => deleteDoctor.mutate(doctor.id)} aria-label="Delete doctor">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      disabled={!canManageDoctors || deleteDoctor.isPending}
+                      onClick={() => {
+                        if (!canManageDoctors) {
+                          setDeleteError("Only L2 Admins can delete doctors.");
+                          return;
+                        }
+                        deleteDoctor.mutate(doctor.id);
+                      }}
+                      aria-label="Delete doctor"
+                      title={canManageDoctors ? "Delete doctor" : "Only L2 Admins can delete doctors"}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
