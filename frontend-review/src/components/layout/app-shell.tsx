@@ -12,6 +12,7 @@ import {
   MessageSquareText,
   Settings2,
   Stethoscope,
+  X,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -136,56 +137,6 @@ export function AppShell() {
               <span className="hidden text-sm font-medium sm:inline">{activeStaff.label}</span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
-            {profileOpen && (
-              <div className="absolute right-0 top-12 w-80 rounded-lg border bg-card p-3 shadow-xl">
-                <p className="mb-2 text-sm font-semibold">Staff roles</p>
-                <div className="space-y-2">
-                  {members.map((member: any) => {
-                    const role = staffDisplay(member);
-                    const isCurrent = activeStaff.email === member.email;
-                    const nextRole = member.role === "L2_ADMIN" ? "L2_ASSISTANT" : "L2_ADMIN";
-                    return (
-                    <div
-                      key={member.email}
-                      className={cn(
-                        "flex w-full items-start gap-3 rounded-md border p-3 text-left",
-                        isCurrent && "border-primary bg-primary/10",
-                      )}
-                    >
-                      <Avatar label={role.avatar} className="h-8 w-8 text-xs" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold">{role.label}</span>
-                        <span className="block truncate text-xs text-muted-foreground">{role.email}</span>
-                        <span className="mt-1 block text-xs text-muted-foreground">{role.description}</span>
-                      </span>
-                      {me?.user?.role === "L2_ADMIN" && me.user.id !== member.id && (
-                        <button
-                          type="button"
-                          className="rounded-md border px-2 py-1 text-xs font-medium hover:bg-background"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            updateRole.mutate({ id: member.id, role: nextRole });
-                          }}
-                        >
-                          {member.role === "L2_ADMIN" ? "Make assistant" : "Make admin"}
-                        </button>
-                      )}
-                    </div>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  className="mt-3 w-full rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
-                  onClick={() => {
-                    api.logout();
-                    window.location.href = "/";
-                  }}
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
             </div>
           </div>
         </header>
@@ -194,6 +145,66 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+      {profileOpen && (
+        <div className="fixed inset-0 z-50 bg-background">
+          <div className="flex h-16 items-center justify-between border-b px-4 md:px-7">
+            <div>
+              <p className="text-lg font-semibold">Staff roles</p>
+              <p className="text-sm text-muted-foreground">View users and manage L2 access.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  api.logout();
+                  window.location.href = "/";
+                }}
+              >
+                Sign out
+              </Button>
+              <Button variant="outline" size="icon" aria-label="Close staff roles" onClick={() => setProfileOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="h-[calc(100vh-4rem)] overflow-y-auto p-4 md:p-7">
+            <div className="mx-auto grid max-w-5xl gap-3 md:grid-cols-2">
+              {members.map((member: any) => {
+                const role = staffDisplay(member);
+                const isCurrent = activeStaff.email === member.email;
+                const nextRole = member.role === "L2_ADMIN" ? "L2_ASSISTANT" : "L2_ADMIN";
+                return (
+                  <div
+                    key={member.email}
+                    className={cn(
+                      "flex items-start gap-3 rounded-md border bg-card p-4",
+                      isCurrent && "border-primary bg-primary/10",
+                    )}
+                  >
+                    <Avatar label={role.avatar} className="h-9 w-9 text-xs" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">{role.label}</p>
+                      <p className="truncate text-sm text-muted-foreground">{role.email}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{role.description}</p>
+                    </div>
+                    {me?.user?.role === "L2_ADMIN" && me.user.id !== member.id && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={updateRole.isPending}
+                        onClick={() => updateRole.mutate({ id: member.id, role: nextRole })}
+                      >
+                        {member.role === "L2_ADMIN" ? "Make assistant" : "Make admin"}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       <ChatbotWidget />
     </div>
   );
