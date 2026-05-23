@@ -16,9 +16,9 @@ export type StaffSession = {
 };
 
 const defaultStaff: StaffSession = {
-  label: "L2 Admin",
+  label: "Admin",
   email: "admin@astergrove.example",
-  avatar: "LA",
+  avatar: "AD",
 };
 
 export function readAuthToken() {
@@ -66,12 +66,12 @@ export function readSignedInUserId() {
 }
 
 export function staffFromUser(user: AuthUser): StaffSession {
-  const label = user.role === "L2_ADMIN" ? "L2 Admin" : "L2 Assistant";
+  const label = user.role === "L2_ADMIN" ? "Admin" : "Assistant";
   const avatar = (user.name || label)
     .split(/\s+/)
     .map((part) => part[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  return { id: user.id, label, email: user.email, avatar: avatar || (user.role === "L2_ADMIN" ? "LA" : "AS") };
+  return { id: user.id, label, email: user.email, avatar: avatar || (user.role === "L2_ADMIN" ? "AD" : "AS") };
 }

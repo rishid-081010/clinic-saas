@@ -211,7 +211,7 @@ export function AppShell() {
 }
 
 function staffDisplay(member: { name?: string; email: string; role: "L2_ADMIN" | "L2_ASSISTANT" }) {
-  const label = member.role === "L2_ADMIN" ? "L2 Admin" : "L2 Assistant";
+  const label = member.role === "L2_ADMIN" ? "Admin" : "Assistant";
   const initials = (member.name || label)
     .split(/\s+/)
     .map((part) => part[0])
@@ -221,7 +221,7 @@ function staffDisplay(member: { name?: string; email: string; role: "L2_ADMIN" |
   return {
     label,
     email: member.email,
-    avatar: initials || (member.role === "L2_ADMIN" ? "LA" : "AS"),
+    avatar: initials || (member.role === "L2_ADMIN" ? "AD" : "AS"),
     description:
       member.role === "L2_ADMIN"
         ? "Can manage clinic profile, FAQ, doctors, bookings, and transcripts."
